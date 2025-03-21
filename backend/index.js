@@ -15,30 +15,11 @@ app.use(
 );
 
 // HELPERS
-const nameExists = async (name) => {
-  try {
-    const nameRegex = new RegExp(`^${name}$`, "i");
-    const existing = await Person.findOne({ name: nameRegex });
-    return !!existing;
-  } catch (e) {
-    console.log("Error checking for existing name", error);
-    throw error;
-  }
-};
 
-// const personError = async (name, number) => {
-//   if (!name) return "Name cannot be empty";
-//   if (await nameExists(name)) return "That person already exists";
-//   if (typeof number !== "string" || !number.match(/^[0-9\-\(\)]+$/)) {
-//     return "Phone number must be a non-empty string. Allowed chars are digits, hyphens and parentheses.";
-//   }
-//   return null;
-// };
-//
 // ROUTES
 
-app.get("/info", (request, response) => {
-  const count = Person.countDocuments();
+app.get("/info", async (request, response) => {
+  const count = await Person.where({}).countDocuments();
   const body = `<p>Phonebook has info for ${count} people</p>\n${new Date()}`;
   response.send(body);
 });
@@ -48,60 +29,82 @@ app.get("/api/persons", async (request, response) => {
   response.json(persons);
 });
 
-app.get("/api/persons/:id", (request, response) => {
+app.get("/api/persons/:id", async (request, response, next) => {
   const id = request.params.id;
-  const person = Person.findById(id);
-  if (!person) return response.status(404).end();
-
-  response.json(person);
+  try {
+    const person = await Person.findById(id);
+    if (!person) return response.status(404).end();
+    response.json(person);
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.post("/api/persons", async (request, response) => {
-  const name = request.body.name.trim();
-  const number = request.body.number.trim();
-
-  // const error = await personError(name, number);
-  // if (error) return response.status(400).json({ error });
-
-  if (await nameExists(name)) {
-    return response.status(400).json({ error: "That person already exists" });
-  }
+app.post("/api/persons", async (request, response, next) => {
+  const name = request.body.name?.trim();
+  const number = request.body.number?.trim();
 
   try {
-    const newPerson = await Person.insertOne({ name, number });
+    const opts = { validateBeforeSave: true };
+    const newPerson = await Person.insertOne({ name, number }, opts);
     response.json(newPerson);
-  } catch (e) {
-    console.error(`Error caught: ${e.name}: ${e.message}`);
-    response.status(400).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 });
 
-app.put("/api/persons/:id", async (request, response) => {
+app.put("/api/persons/:id", async (request, response, next) => {
   const id = request.params.id;
-  const name = request.body.name.trim();
-  const number = request.body.number.trim();
+  const name = request.body.name?.trim();
+  const number = request.body.number?.trim();
 
-  const opts = { new: true, runValidators: true };
   try {
+    const opts = { new: true, runValidators: true };
     const updated = await Person.findByIdAndUpdate(id, { name, number }, opts);
+    if (!updated)
+      return response
+        .status(404)
+        .json({ error: "That person could not be found" });
     response.json(updated);
-  } catch (e) {
-    console.error(`Error caught: ${e.name}: ${e.message}`);
-    response.status(400).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 });
 
-app.delete("/api/persons/:id", async (request, response) => {
+app.delete("/api/persons/:id", async (request, response, next) => {
   const id = request.params.id;
   try {
     const deleted = await Person.findByIdAndDelete(id);
     let code = deleted ? 204 : 404;
     response.status(code).end();
-  } catch {
-    response.status(500).end();
+  } catch (error) {
+    next(error);
   }
 });
 
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "Unknown Endpoint" });
+};
+
+app.use(unknownEndpoint);
+
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+
+  switch (error.name) {
+    case "CastError":
+      return response.status(400).send({ error: "malformatted id" });
+    case "ValidationError":
+      return response.status(400).send({ error: error.message });
+    case "DuplicateNameError":
+      return response.status(400).send({ error: error.message });
+    default:
+      next(error);
+  }
+};
+
+// must be last loaded middleware, all routes should be registered before this
+app.use(errorHandler);
 // start app
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
