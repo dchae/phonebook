@@ -9,7 +9,7 @@ console.log("Connecting to", url);
 mongoose
   .connect(url)
   .then(() => console.log("Connected to MongoDB"))
-  .catch(() => console.log("Error connecting to MongoDB:", error.message));
+  .catch((e) => console.log("Error connecting to MongoDB:", e.message));
 
 const personSchema = new mongoose.Schema({
   name: String,
