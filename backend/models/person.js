@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 
 const url = process.env.MONGODB_URI;
-console.log(process.env);
 
 // mongoose.set("strictQuery", false);
 // silently ignore queries with fields that don't exist in the schema (instead of throwing an error)
