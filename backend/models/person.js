@@ -16,6 +16,14 @@ const personSchema = new mongoose.Schema({
   number: String,
 });
 
+personSchema.path("name").validate((s) => s.length > 0, "Name cannot be empty");
+personSchema
+  .path("number")
+  .validate(
+    (s) => /^[0-9\-\(\)]+$/.test(s),
+    "Phone number must be a non-empty string. Allowed chars are digits, hyphens and parentheses.",
+  );
+
 personSchema.set("toJSON", {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString();

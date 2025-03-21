@@ -61,9 +61,10 @@ const App = () => {
       .then((added) => {
         setPersons(persons.concat(added));
         addNotification(`Added ${added.name}`);
+        resetFormFields();
       })
-      .catch(() => {
-        addNotification(`The person could not be added`, "error");
+      .catch((e) => {
+        addNotification(`The person could not be added: ${e.message}`, "error");
       });
   };
 
@@ -74,8 +75,8 @@ const App = () => {
         addNotification(`Updated ${updated.name}`);
         resetFormFields();
       })
-      .catch(() => {
-        addNotification(`The person could not be found`, "error");
+      .catch((e) => {
+        addNotification(e.message, "error");
       });
   };
 
@@ -86,11 +87,11 @@ const App = () => {
       .then((deleted) => {
         setPersons(persons.filter((person) => person.id !== id));
         addNotification(`Deleted ${deleted.name}`);
+        resetFormFields();
       })
-      .catch(() => {
-        addNotification(`The person could not be found`, "error");
-      })
-      .finally(() => resetFormFields());
+      .catch((e) => {
+        addNotification(`The person could not be found: ${e.message}`, "error");
+      });
   };
 
   const nameInputChangeHandler = (e) => setNewName(e.target.value);

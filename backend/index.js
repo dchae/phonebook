@@ -14,30 +14,6 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :json"),
 );
 
-// // "Database"
-// let persons = [
-//   {
-//     id: "48482",
-//     name: "Arto Hellas",
-//     number: "040-123456",
-//   },
-//   {
-//     id: "50517",
-//     name: "Ada Lovelace",
-//     number: "39-44-5323523",
-//   },
-//   {
-//     id: "20567",
-//     name: "Dan Abramov",
-//     number: "12-43-234345",
-//   },
-//   {
-//     id: "97845",
-//     name: "Mary Poppendieck",
-//     number: "39-23-6423122",
-//   },
-// ];
-
 // HELPERS
 const nameExists = async (name) => {
   try {
@@ -45,21 +21,20 @@ const nameExists = async (name) => {
     const existing = await Person.findOne({ name: nameRegex });
     return !!existing;
   } catch (e) {
-    console.log("HERE2");
     console.log("Error checking for existing name", error);
     throw error;
   }
 };
 
-const personError = async (name, number) => {
-  if (!name) return "Name cannot be empty";
-  if (await nameExists(name)) return "That person already exists";
-  if (typeof number !== "string" || !number.match(/^[0-9\-\(\)]+$/)) {
-    return "Phone number must be a non-empty string. Allowed chars are digits, hyphens and parentheses.";
-  }
-  return null;
-};
-
+// const personError = async (name, number) => {
+//   if (!name) return "Name cannot be empty";
+//   if (await nameExists(name)) return "That person already exists";
+//   if (typeof number !== "string" || !number.match(/^[0-9\-\(\)]+$/)) {
+//     return "Phone number must be a non-empty string. Allowed chars are digits, hyphens and parentheses.";
+//   }
+//   return null;
+// };
+//
 // ROUTES
 
 app.get("/info", (request, response) => {
@@ -85,11 +60,20 @@ app.post("/api/persons", async (request, response) => {
   const name = request.body.name.trim();
   const number = request.body.number.trim();
 
-  const error = await personError(name, number);
-  if (error) return response.status(400).json({ error });
+  // const error = await personError(name, number);
+  // if (error) return response.status(400).json({ error });
 
-  const newPerson = await Person.insertOne({ name, number });
-  response.json(newPerson);
+  if (await nameExists(name)) {
+    return response.status(400).json({ error: "That person already exists" });
+  }
+
+  try {
+    const newPerson = await Person.insertOne({ name, number });
+    response.json(newPerson);
+  } catch (e) {
+    console.error(`Error caught: ${e.name}: ${e.message}`);
+    response.status(400).json({ error: e.message });
+  }
 });
 
 app.put("/api/persons/:id", async (request, response) => {
@@ -98,8 +82,13 @@ app.put("/api/persons/:id", async (request, response) => {
   const number = request.body.number.trim();
 
   const opts = { new: true, runValidators: true };
-  const updated = await Person.findByIdAndUpdate(id, { name, number }, opts);
-  response.json(updated);
+  try {
+    const updated = await Person.findByIdAndUpdate(id, { name, number }, opts);
+    response.json(updated);
+  } catch (e) {
+    console.error(`Error caught: ${e.name}: ${e.message}`);
+    response.status(400).json({ error: e.message });
+  }
 });
 
 app.delete("/api/persons/:id", async (request, response) => {
