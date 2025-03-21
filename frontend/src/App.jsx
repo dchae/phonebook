@@ -8,6 +8,9 @@ import db from "./services/db.js";
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [filterQuery, setFilterQuery] = useState("");
+  const filteredPersons = filterQuery
+    ? persons.filter(({ name }) => name.toLowerCase().includes(filterQuery))
+    : persons;
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [notification, setNotification] = useState(null);
@@ -61,8 +64,7 @@ const App = () => {
       })
       .catch(() => {
         addNotification(`The person could not be added`, "error");
-      })
-      .finally(() => resetFormFields());
+      });
   };
 
   const updatePerson = (id, person) => {
@@ -70,11 +72,11 @@ const App = () => {
       .then((updated) => {
         setPersons(persons.map((p) => (p.id === id ? updated : p)));
         addNotification(`Updated ${updated.name}`);
+        resetFormFields();
       })
       .catch(() => {
         addNotification(`The person could not be found`, "error");
-      })
-      .finally(() => resetFormFields());
+      });
   };
 
   const deletePerson = ({ name, id }) => {
@@ -97,9 +99,6 @@ const App = () => {
     const query = e.target.value.trim().toLowerCase();
     setFilterQuery(query);
   };
-  const filteredPersons = filterQuery
-    ? persons.filter(({ name }) => name.toLowerCase().includes(filterQuery))
-    : persons;
 
   return (
     <div>
